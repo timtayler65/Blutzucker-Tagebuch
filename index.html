@@ -1,14 +1,108 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1565c0"><link rel="manifest" href="manifest.webmanifest"><title>Blutzucker-Tagebuch</title><style>
-body{margin:0;background:#f3f6f9;color:#17212b;font-family:system-ui,sans-serif}header{background:#1565c0;color:#fff;padding:18px 16px}main{max-width:720px;margin:auto;padding:10px}.card{background:#fff;border-radius:14px;padding:14px;margin:10px 0;box-shadow:0 1px 5px #0001}.tabs,.grid,.stats,.actions{display:grid;gap:7px}.tabs{grid-template-columns:repeat(4,1fr)}.grid,.actions{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(3,1fr)}button,input,select,textarea{font:inherit;border-radius:9px;padding:11px;border:1px solid #dfe5ea}button{background:#e7eef7;color:#164b86;font-weight:700;border:0}.active,.primary{background:#1565c0;color:#fff}.primary{width:100%;margin-top:10px}.field{display:flex;flex-direction:column;gap:4px}.full{grid-column:1/-1}.stat{text-align:center;background:#f7f9fb;padding:10px;border-radius:9px}.stat b{display:block;font-size:20px}.muted{color:#66727e;font-size:13px}.entry{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:10px 0}.entry small{display:block;color:#66727e;margin-top:3px}.danger{background:#ffebee;color:#c62828}canvas{width:100%;height:230px}@media(max-width:420px){.grid,.stats{grid-template-columns:1fr}.full{grid-column:auto}}
-</style></head><body><header><h1>Blutzucker-Tagebuch</h1><div>Lokale Speicherung auf diesem Gerät</div></header><main>
-<section class="card"><div class="tabs"><button data-r="1">Heute</button><button data-r="7">7 Tage</button><button data-r="30">30 Tage</button><button data-r="0">Alle</button></div></section>
-<section class="card"><h2>Übersicht</h2><div class="stats"><div class="stat"><b id="avg">—</b>Ø</div><div class="stat"><b id="min">—</b>Min.</div><div class="stat"><b id="max">—</b>Max.</div></div><p id="count" class="muted">0 Messungen</p><canvas id="chart"></canvas></section>
-<section class="card"><h2>Neue Messung</h2><div class="grid"><div class="field"><label>Blutzucker</label><input id="value" type="number" step=".1" inputmode="decimal" placeholder="z. B. 105"></div><div class="field"><label>Einheit</label><select id="unit"><option value="mg">mg/dL</option><option value="mmol">mmol/L</option></select></div><div class="field"><label>Zeitpunkt</label><select id="type"><option>Nüchtern</option><option>Morgens</option><option>Mittags</option><option>Abends</option><option>Nach dem Essen</option></select></div><div class="field"><label>Datum/Uhrzeit</label><input id="date" type="datetime-local"></div><div class="field full"><label>Notiz</label><textarea id="note" placeholder="Optional"></textarea></div></div><button class="primary" id="save">Messwert speichern</button></section>
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1565c0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Blutzucker-Tagebuch 2.0</title>
+<style>
+:root{--blue:#1565c0;--bg:#f3f6f9;--card:#fff;--text:#17212b;--muted:#66727e;--line:#e2e7ec;--good:#2eaa57;--warn:#f29b18;--high:#e64b4b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--blue);color:#fff;padding:16px;position:sticky;top:0;z-index:5}header h1{margin:0;font-size:22px}header small{opacity:.9}
+main{max-width:820px;margin:auto;padding:10px 10px 40px}.card{background:var(--card);border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 2px 9px #00000012}
+h2{font-size:19px;margin:3px 0 12px}.tabs,.grid,.stats,.actions,.chips{display:grid;gap:7px}.tabs{grid-template-columns:repeat(5,1fr)}.grid{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(3,1fr)}.chips{grid-template-columns:repeat(5,1fr)}
+button,input,select,textarea{font:inherit;border-radius:10px;padding:11px;border:1px solid var(--line);background:#fff;color:var(--text)}button{font-weight:700;background:#e8f0fa;color:#164b86;border:0}.active,.primary{background:var(--blue);color:#fff}.primary{width:100%;margin-top:10px}
+.field{display:flex;flex-direction:column;gap:4px}.full{grid-column:1/-1}.muted{color:var(--muted);font-size:13px}.stat{text-align:center;background:#f7f9fb;padding:10px;border-radius:10px}.stat b{display:block;font-size:20px}
+canvas{width:100%;height:260px}.entry{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding:10px 0}.entry small{display:block;color:var(--muted);margin-top:3px}
+.badge{display:inline-block;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:700}.good{background:#e4f6e9;color:#16743a}.warn{background:#fff1d9;color:#9a5c00}.high{background:#ffe4e4;color:#a62222}
+.danger{background:#ffebee;color:#c62828}.success{background:#e5f6ea;color:#18733b}.note{background:#f7f9fb;border-radius:10px;padding:10px}.hidden{display:none}
+@media(max-width:560px){.tabs{grid-template-columns:repeat(3,1fr)}.grid,.stats,.actions{grid-template-columns:1fr 1fr}.chips{grid-template-columns:1fr 1fr}.full{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header><h1>🩸 Blutzucker-Tagebuch</h1><small>Version 2.0 · lokal auf diesem Gerät</small></header>
+<main>
+<section class="card"><div class="tabs">
+<button data-range="1">Heute</button><button data-range="7">7 Tage</button><button data-range="30">30 Tage</button><button data-range="90">90 Tage</button><button data-range="365">Jahr</button>
+</div></section>
+
+<section class="card"><h2>Übersicht</h2><div class="stats">
+<div class="stat"><b id="avg">—</b>Ø mg/dL</div><div class="stat"><b id="min">—</b>Min.</div><div class="stat"><b id="max">—</b>Max.</div>
+</div><p id="count" class="muted"></p><canvas id="chart"></canvas></section>
+
+<section class="card"><h2>Neue Messung</h2><div class="grid">
+<div class="field"><label>Blutzucker</label><input id="value" type="number" step=".1" inputmode="decimal" placeholder="z. B. 105"></div>
+<div class="field"><label>Einheit</label><select id="unit"><option value="mg">mg/dL</option><option value="mmol">mmol/L</option></select></div>
+<div class="field full"><label>Zeitpunkt</label><div class="chips">
+<button class="type active" data-type="Nüchtern">Nüchtern</button><button class="type" data-type="Morgens">Morgens</button><button class="type" data-type="Mittags">Mittags</button><button class="type" data-type="Abends">Abends</button><button class="type" data-type="Nach dem Essen">Nach dem Essen</button>
+</div></div>
+<div class="field"><label>Datum</label><input id="date" type="date"></div><div class="field"><label>Uhrzeit</label><input id="time" type="time"></div>
+<div class="field full"><label>Notiz</label><textarea id="note" placeholder="Optional: Frühstück, Sport, Besonderheiten ..."></textarea></div>
+</div><button class="primary" id="save">✓ Messung speichern</button></section>
+
+<section class="card"><h2>Verlauf & Filter</h2>
+<div class="grid"><div class="field"><label>Zeitraum</label><select id="chartRange"><option value="7">7 Tage</option><option value="30" selected>30 Tage</option><option value="90">90 Tage</option><option value="365">12 Monate</option><option value="0">Alle</option></select></div>
+<div class="field"><label>Kategorie</label><select id="filterType"><option value="">Alle Kategorien</option><option>Nüchtern</option><option>Morgens</option><option>Mittags</option><option>Abends</option><option>Nach dem Essen</option></select></div></div>
+<canvas id="trend"></canvas></section>
+
+<section class="card"><h2>Monats- & Jahresübersicht</h2>
+<div class="grid"><div class="field"><label>Jahr</label><select id="yearSelect"></select></div><div class="field"><label>Ansicht</label><select id="summaryMode"><option value="month">Monat</option><option value="year">Jahr</option></select></div></div>
+<div id="summary"></div></section>
+
 <section class="card"><h2>Messwerte</h2><div id="list"></div></section>
-<section class="card"><h2>Daten sichern</h2><div class="actions"><button id="csv">CSV exportieren</button><button id="backup">Backup speichern</button><button id="restore">Backup wiederherstellen</button><button id="clear" class="danger">Alle löschen</button></div><input id="file" type="file" accept=".json" hidden><p class="muted">Die Messwerte werden ausschließlich lokal gespeichert.</p></section></main>
+
+<section class="card"><h2>Backup & Daten</h2>
+<div class="actions"><button id="backup">☁ Backup speichern</button><button id="restore">↥ Backup wiederherstellen</button><button id="csv">CSV exportieren</button><button id="clear" class="danger">Alle Daten löschen</button></div>
+<input id="file" type="file" accept=".json" hidden><p class="muted">Die Messwerte werden lokal im Browser (IndexedDB) gespeichert. Es gibt keinen Server-Sync. Für langfristige Sicherheit regelmäßig ein Backup exportieren.</p>
+</section>
+</main>
 <script>
-let db,range=1,$=x=>document.getElementById(x);function now(){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}$('date').value=now();
-function openDB(){return new Promise((ok,no)=>{let r=indexedDB.open('BZDiary',1);r.onupgradeneeded=()=>r.result.createObjectStore('m',{keyPath:'id',autoIncrement:true});r.onsuccess=()=>{db=r.result;ok()};r.onerror=()=>no(r.error)})}function all(){return new Promise((ok,no)=>{let r=db.transaction('m').objectStore('m').getAll();r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}function add(x){return new Promise((ok,no)=>{let r=db.transaction('m','readwrite').objectStore('m').add(x);r.onsuccess=()=>ok();r.onerror=()=>no(r.error)})}function remove(id){return new Promise((ok,no)=>{let r=db.transaction('m','readwrite').objectStore('m').delete(id);r.onsuccess=()=>ok();r.onerror=()=>no(r.error)})}function mg(v,u){return u==='mg'?v:v*18.0182}function show(v,u){return u==='mg'?v.toFixed(0)+' mg/dL':(v/18.0182).toFixed(1)+' mmol/L'}function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function refresh(){let a=await all();a.sort((x,y)=>x.ts-y.ts);if(range)a=a.filter(x=>x.ts>=Date.now()-range*86400000);let v=a.map(x=>mg(x.value,x.unit));$('count').textContent=a.length+' Messung'+(a.length===1?'':'en');$('avg').textContent=v.length?(v.reduce((x,y)=>x+y,0)/v.length).toFixed(0):'—';$('min').textContent=v.length?Math.min(...v).toFixed(0):'—';$('max').textContent=v.length?Math.max(...v).toFixed(0):'—';let l=$('list');l.innerHTML='';if(!a.length){l.innerHTML='<p class="muted">Keine Messwerte vorhanden.</p>';return}a.slice().reverse().forEach(x=>{let d=document.createElement('div');d.className='entry';d.innerHTML='<div><b>'+show(x.value,x.unit)+'</b> · '+esc(x.type)+'<small>'+new Date(x.ts).toLocaleString('de-DE')+(x.note?' · '+esc(x.note):'')+'</small></div><button class="danger">Löschen</button>';d.querySelector('button').onclick=async()=>{if(confirm('Messwert löschen?')){await remove(x.id);refresh()}};l.appendChild(d)})}
-document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-r]').forEach(x=>x.classList.remove('active'));b.classList.add('active');range=+b.dataset.r;refresh()});$('save').onclick=async()=>{let v=parseFloat($('value').value.replace(',','.'));if(!v||v<=0)return alert('Bitte gültigen Wert eingeben.');await add({value:v,unit:$('unit').value,type:$('type').value,ts:new Date($('date').value).getTime(),note:$('note').value.trim()});$('value').value='';$('note').value='';$('date').value=now();refresh()};function dl(n,t,x){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([x],{type:t}));a.download=n;a.click()}$('backup').onclick=async()=>dl('blutzucker-backup.json','application/json',JSON.stringify({measurements:await all()},null,2));$('restore').onclick=()=>$('file').click();$('file').onchange=async e=>{try{let o=JSON.parse(await e.target.files[0].text());for(let x of o.measurements||[]){delete x.id;await add(x)}alert('Backup wiederhergestellt.');refresh()}catch{alert('Ungültiges Backup.')}};$('clear').onclick=async()=>{if(confirm('Alle Messwerte löschen?')){await new Promise((ok,no)=>{let r=db.transaction('m','readwrite').objectStore('m').clear();r.onsuccess=ok;r.onerror=no});refresh()}};(async()=>{await openDB();document.querySelector('[data-r="1"]').classList.add('active');refresh()})();
+let db,range=1,selectedType='Nüchtern',$=id=>document.getElementById(id);
+function pad(n){return String(n).padStart(2,'0')}
+function setNow(){let d=new Date();$('date').value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());$('time').value=pad(d.getHours())+':'+pad(d.getMinutes())}
+setNow();
+function openDB(){return new Promise((ok,no)=>{let r=indexedDB.open('BZDiaryV2',1);r.onupgradeneeded=()=>r.result.createObjectStore('m',{keyPath:'id',autoIncrement:true});r.onsuccess=()=>{db=r.result;ok()};r.onerror=()=>no(r.error)})}
+function all(){return new Promise((ok,no)=>{let r=db.transaction('m').objectStore('m').getAll();r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+function add(x){return new Promise((ok,no)=>{let r=db.transaction('m','readwrite').objectStore('m').add(x);r.onsuccess=()=>ok();r.onerror=()=>no(r.error)})}
+function remove(id){return new Promise((ok,no)=>{let r=db.transaction('m','readwrite').objectStore('m').delete(id);r.onsuccess=()=>ok();r.onerror=()=>no(r.error)})}
+function clearDB(){return new Promise((ok,no)=>{let r=db.transaction('m','readwrite').objectStore('m').clear();r.onsuccess=ok;r.onerror=no})}
+function mg(v,u){return u==='mg'?v:v*18.0182}function fmt(v){return Math.round(v)}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function status(v){if(v<70)return ['Niedrig','high'];if(v>180)return ['Hoch','high'];if(v>140)return ['Erhöht','warn'];return ['Im Ziel','good']}
+function filterData(a,days,type){let now=Date.now();return a.filter(x=>(!days||x.ts>=now-days*86400000)&&(!type||x.type===type))}
+async function refresh(){
+ let allData=await all();allData.sort((a,b)=>a.ts-b.ts);let a=filterData(allData,range,'');
+ let v=a.map(x=>mg(x.value,x.unit));$('count').textContent=a.length+' Messung'+(a.length===1?'':'en');
+ $('avg').textContent=v.length?fmt(v.reduce((x,y)=>x+y,0)/v.length):'—';$('min').textContent=v.length?fmt(Math.min(...v)):'—';$('max').textContent=v.length?fmt(Math.max(...v)):'—';
+ draw($('chart'),a,'Übersicht');renderList(a);renderTrend();renderSummary(allData);populateYears(allData)
+}
+function draw(canvas,a,title){
+ let ctx=canvas.getContext('2d'),r=devicePixelRatio||1,w=canvas.clientWidth||700,h=260;canvas.width=w*r;canvas.height=h*r;ctx.scale(r,r);ctx.clearRect(0,0,w,h);
+ if(!a.length){ctx.fillStyle='#66727e';ctx.font='14px sans-serif';ctx.fillText('Noch keine Messwerte für diesen Zeitraum.',15,30);return}
+ let vals=a.map(x=>mg(x.value,x.unit)),lo=Math.min(...vals),hi=Math.max(...vals);if(lo===hi){lo-=10;hi+=10}else{let p=(hi-lo)*.15;lo-=p;hi+=p}
+ let L=42,T=18,R=12,B=28,pw=w-L-R,ph=h-T-B;ctx.strokeStyle='#e1e5e9';ctx.lineWidth=1;for(let i=0;i<4;i++){let y=T+ph*i/3;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(w-R,y);ctx.stroke()}
+ ctx.fillStyle='#66727e';ctx.font='12px sans-serif';for(let i=0;i<4;i++){let y=T+ph*i/3;let val=hi-(hi-lo)*i/3;ctx.fillText(String(Math.round(val)),3,y+4)}
+ ctx.strokeStyle='#1565c0';ctx.lineWidth=3;ctx.beginPath();a.forEach((x,i)=>{let xx=L+(a.length===1?.5:i/(a.length-1))*pw,yy=T+(hi-mg(x.value,x.unit))/(hi-lo)*ph;i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy)});ctx.stroke();
+ a.forEach((x,i)=>{let xx=L+(a.length===1?.5:i/(a.length-1))*pw,yy=T+(hi-mg(x.value,x.unit))/(hi-lo)*ph;ctx.fillStyle='#1565c0';ctx.beginPath();ctx.arc(xx,yy,4,0,Math.PI*2);ctx.fill()})
+}
+function renderTrend(){all().then(data=>{let days=+$('chartRange').value,type=$('filterType').value,a=filterData(data,days,type).sort((x,y)=>x.ts-y.ts);draw($('trend'),a,'Verlauf')})}
+function renderList(a){let l=$('list');l.innerHTML='';if(!a.length){l.innerHTML='<p class="muted">Keine Messwerte vorhanden.</p>';return}a.slice().reverse().forEach(x=>{let d=document.createElement('div');d.className='entry';let st=status(mg(x.value,x.unit));d.innerHTML='<div><b>'+fmt(mg(x.value,x.unit))+' mg/dL</b> <span class="badge '+st[1]+'">'+st[0]+'</span> · '+esc(x.type)+'<small>'+new Date(x.ts).toLocaleString('de-DE')+(x.note?' · '+esc(x.note):'')+'</small></div><button class="danger">Löschen</button>';d.querySelector('button').onclick=async()=>{if(confirm('Messwert löschen?')){await remove(x.id);refresh()}};l.appendChild(d)})}
+function populateYears(a){let years=[...new Set(a.map(x=>new Date(x.ts).getFullYear()))].sort((x,y)=>y-x);if(!years.length)years=[new Date().getFullYear()];let cur=$('yearSelect').value;$('yearSelect').innerHTML=years.map(y=>'<option>'+y+'</option>').join('');if(years.includes(+cur))$('yearSelect').value=cur}
+function renderSummary(a){let y=+$('yearSelect').value||new Date().getFullYear(),mode=$('summaryMode').value;let arr=a.filter(x=>new Date(x.ts).getFullYear()===y);let s='';
+ if(mode==='year'){let v=arr.map(x=>mg(x.value,x.unit));s='<div class="stats"><div class="stat"><b>'+v.length+'</b>Messungen</div><div class="stat"><b>'+(v.length?fmt(v.reduce((p,q)=>p+q,0)/v.length):'—')+'</b>Ø mg/dL</div><div class="stat"><b>'+(v.length?fmt(Math.min(...v)):'—')+' / '+(v.length?fmt(Math.max(...v)):'—')+'</b>Min / Max</div></div><canvas id="yearChart"></canvas>';$('summary').innerHTML=s;draw($('yearChart'),arr,'Jahr '+y);return}
+ let rows=[];for(let m=0;m<12;m++){let q=arr.filter(x=>new Date(x.ts).getMonth()===m),v=q.map(x=>mg(x.value,x.unit));rows.push({name:new Date(y,m,1).toLocaleDateString('de-DE',{month:'short'}),n:v.length,avg:v.length?fmt(v.reduce((p,z)=>p+z,0)/v.length):null})}
+ $('summary').innerHTML='<div class="stats"><div class="stat"><b>'+arr.length+'</b>Messungen</div><div class="stat"><b>'+(arr.length?fmt(arr.map(x=>mg(x.value,x.unit)).reduce((p,z)=>p+z,0)/arr.length):'—')+'</b>Ø mg/dL</div><div class="stat"><b>'+y+'</b>Jahr</div></div><div class="note">'+rows.map(r=>r.name+': '+(r.n?r.avg+' mg/dL · '+r.n+' Messungen':'—')).join('<br>')+'</div>'
+}
+document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-range]').forEach(x=>x.classList.remove('active'));b.classList.add('active');range=+b.dataset.range;refresh()});
+document.querySelectorAll('.type').forEach(b=>b.onclick=()=>{document.querySelectorAll('.type').forEach(x=>x.classList.remove('active'));b.classList.add('active');selectedType=b.dataset.type});
+$('save').onclick=async()=>{let v=parseFloat($('value').value.replace(',','.'));if(!v||v<=0)return alert('Bitte einen gültigen Wert eingeben.');let ts=new Date($('date').value+'T'+$('time').value).getTime();await add({value:v,unit:$('unit').value,type:selectedType,ts,note:$('note').value.trim()});$('value').value='';$('note').value='';setNow();refresh()};
+$('chartRange').onchange=renderTrend;$('filterType').onchange=renderTrend;$('yearSelect').onchange=()=>all().then(renderSummary);$('summaryMode').onchange=()=>all().then(renderSummary);
+function download(name,type,data){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$('backup').onclick=async()=>download('blutzucker-backup-'+new Date().toISOString().slice(0,10)+'.json','application/json',JSON.stringify({app:'Blutzucker-Tagebuch',version:2,created:new Date().toISOString(),measurements:await all()},null,2));
+$('csv').onclick=async()=>{let a=await all(),s='Datum;Uhrzeit;Kategorie;Wert;Einheit;Notiz\\n';a.sort((x,y)=>x.ts-y.ts).forEach(x=>{let d=new Date(x.ts);s+=d.toLocaleDateString('de-DE')+';'+d.toLocaleTimeString('de-DE')+';'+x.type+';'+x.value+';'+(x.unit==='mg'?'mg/dL':'mmol/L')+';"'+String(x.note||'').replaceAll('"','""')+'"\n'});download('blutzucker.csv','text/csv;charset=utf-8',s)};
+$('restore').onclick=()=>$('file').click();$('file').onchange=async e=>{try{let o=JSON.parse(await e.target.files[0].text());if(!Array.isArray(o.measurements))throw Error();let old=await all();for(let x of o.measurements){delete x.id;await add(x)}alert(o.measurements.length+' Messwerte wiederhergestellt.');refresh()}catch{alert('Ungültiges Backup.')}e.target.value=''};
+$('clear').onclick=async()=>{if(confirm('Wirklich ALLE Messwerte auf diesem Gerät löschen?')){await clearDB();refresh()}};
+(async()=>{await openDB();document.querySelector('[data-range="1"]').classList.add('active');refresh();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{})})();
 </script></body></html>
