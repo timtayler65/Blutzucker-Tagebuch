@@ -1,0 +1,1 @@
+Blutzucker-Tagebuch PWA. Über HTTPS bereitstellen und auf Android in Chrome öffnen; danach App installieren bzw. Zum Startbildschirm hinzufügen.
